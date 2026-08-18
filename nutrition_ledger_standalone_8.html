@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<title>Nutrition Ledger</title>
+<style>
+  :root {
+    --paper: #FAF7F0;
+    --ink: #1C1B19;
+    --forest: #2F4B3C;
+    --wheat: #B8912A;
+    --rust: #A8432C;
+    --line: #DDD6C8;
+    --line-strong: #1C1B19;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  body { padding-bottom: 40px; }
+  .mono { font-family: 'SFMono-Regular', Consolas, 'JetBrains Mono', monospace; }
+  #root { max-width: 980px; margin: 0 auto; }
+
+  .nl-header {
+    padding: 22px 20px 16px;
+    border-bottom: 4px solid var(--line-strong);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .nl-eyebrow {
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--forest);
+    margin: 0 0 6px;
+  }
+  h1 {
+    font-family: -apple-system, sans-serif;
+    font-weight: 800;
+    font-size: 34px;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    margin: 0;
+    line-height: 0.98;
+  }
+  .nl-sub { margin: 8px 0 0; font-size: 13.5px; color: #565149; max-width: 560px; }
+
+  .nl-gear {
+    background: none;
+    border: 2px solid var(--ink);
+    width: 42px;
+    height: 42px;
+    font-size: 18px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .nl-gear:hover { background: var(--ink); color: var(--paper); }
+
+  .nl-keybar {
+    padding: 10px 20px;
+    background: #F2EEE3;
+    border-bottom: 1px dashed var(--line);
+    font-size: 12.5px;
+    display: none;
+    align-items: center;
+    gap: 8px;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+  }
+  .nl-keybar.show { display: flex; }
+  .nl-keybar .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--rust); flex-shrink: 0; }
+  .nl-keybar.ok .dot { background: var(--forest); }
+  .nl-keybar a { color: var(--forest); text-decoration: underline; cursor: pointer; }
+
+  /* Tabs */
+  .nl-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--line);
+    padding: 0 20px;
+    gap: 4px;
+  }
+  .nl-tab {
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    padding: 12px 14px 10px;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #8a8375;
+    cursor: pointer;
+  }
+  .nl-tab.active { color: var(--ink); border-bottom-color: var(--forest); font-weight: 700; }
+  .nl-panel { display: none; }
+  .nl-panel.active { display: block; }
+
+  .nl-form {
+    padding: 18px 20px;
+    border-bottom: 1px dashed var(--line);
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  select, input[type=date] {
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: #fff;
+    border: 2px solid var(--ink);
+    padding: 10px;
+    color: var(--ink);
+    height: 44px;
+  }
+  input[type=date] {
+    letter-spacing: normal;
+    min-width: 152px;
+  }
+  textarea {
+    flex: 1;
+    min-width: 220px;
+    font-family: -apple-system, sans-serif;
+    font-size: 16px;
+    border: 2px solid var(--ink);
+    padding: 10px 12px;
+    resize: vertical;
+    min-height: 44px;
+    background: #fff;
+    color: var(--ink);
+  }
+  textarea:focus, select:focus, input[type=date]:focus { outline: 3px solid var(--wheat); outline-offset: -1px; }
+  button.nl-add {
+    font-weight: 700;
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: var(--forest);
+    color: var(--paper);
+    border: 2px solid var(--forest);
+    padding: 0 22px;
+    height: 44px;
+    cursor: pointer;
+    width: 100%;
+  }
+  button.nl-add:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .nl-error {
+    margin: 16px 20px 0;
+    padding: 10px 14px;
+    background: #F5E4DF;
+    border-left: 4px solid var(--rust);
+    color: var(--rust);
+    font-size: 13px;
+    display: none;
+  }
+  .nl-error.show { display: block; }
+
+  .nl-table-wrap { padding: 18px 20px 28px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-align: right;
+    padding: 8px;
+    border-bottom: 3px solid var(--ink);
+    color: #565149;
+    white-space: nowrap;
+  }
+  thead th:first-child, thead th:nth-child(2) { text-align: left; }
+  tbody td { padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  tbody td:first-child, tbody td:nth-child(2) { text-align: left; white-space: normal; }
+  tbody td.nl-desc { max-width: 220px; color: #3d3a34; font-size: 12.5px; }
+  tbody tr:hover { background: #F2EEE3; }
+  tr.nl-entry-row { cursor: pointer; }
+  tr.nl-entry-row td.nl-desc { text-decoration: underline dotted #b7ae9c; text-underline-offset: 3px; }
+  .nl-meal-tag {
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border: 1px solid var(--forest);
+    color: var(--forest);
+    white-space: nowrap;
+  }
+  .nl-del { background: none; border: none; color: #a29a8a; cursor: pointer; font-size: 16px; padding: 4px 6px; }
+  .nl-del:hover { color: var(--rust); }
+
+  tr.nl-day-header td {
+    background: var(--ink);
+    color: var(--paper);
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 7px 8px;
+    text-align: left;
+  }
+  tr.nl-day-subtotal td {
+    background: #F2EEE3;
+    font-weight: 700;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 12px;
+    border-bottom: 2px solid var(--line-strong);
+  }
+  tr.nl-day-subtotal td:first-child { text-transform: uppercase; letter-spacing: 0.04em; font-size: 11px; }
+
+  tfoot td { padding: 12px 8px; border-top: 4px solid var(--ink); font-weight: 700; text-align: right; font-family: 'SFMono-Regular', Consolas, monospace; }
+  tfoot td:first-child { text-align: left; text-transform: uppercase; letter-spacing: 0.04em; font-size: 13px; font-family: -apple-system, sans-serif; }
+
+  .nl-empty { padding: 36px 20px; text-align: center; color: #8a8375; font-size: 13.5px; }
+  .nl-loading-row td { text-align: left; color: var(--wheat); font-family: 'SFMono-Regular', Consolas, monospace; font-size: 12px; padding: 12px 8px; }
+  .nl-footnote { padding: 0 20px 24px; font-size: 11px; color: #8a8375; font-family: 'SFMono-Regular', Consolas, monospace; }
+
+  /* Weekly / Monthly panels */
+  .nl-period-bar {
+    padding: 16px 20px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .nl-period-bar select { height: 40px; }
+  .nl-period-label {
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 12px;
+    color: #565149;
+  }
+  .nl-summary-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    margin: 16px 20px 0;
+    border: 2px solid var(--ink);
+  }
+  .nl-summary-cell {
+    flex: 1;
+    min-width: 100px;
+    padding: 10px 12px;
+    border-right: 1px solid var(--line);
+  }
+  .nl-summary-cell:last-child { border-right: none; }
+  .nl-summary-cell .lbl {
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #8a8375;
+    display: block;
+    margin-bottom: 3px;
+  }
+  .nl-summary-cell .val {
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .nl-chart {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 140px;
+    margin: 20px 20px 0;
+    padding: 0 4px;
+    border-bottom: 2px solid var(--ink);
+  }
+  .nl-target-line {
+    position: absolute;
+    left: 0; right: 0;
+    border-top: 2px dashed var(--rust);
+    z-index: 2;
+  }
+  .nl-target-line .nl-target-tag {
+    position: absolute;
+    right: 2px;
+    top: -16px;
+    background: var(--paper);
+    color: var(--rust);
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 9.5px;
+    padding: 0 4px;
+    white-space: nowrap;
+  }
+  .nl-chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+  .nl-chart-val { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 9.5px; color: #565149; margin-bottom: 3px; }
+  .nl-chart-bar { width: 60%; background: var(--forest); min-height: 2px; }
+  .nl-chart-bar.empty { background: var(--line); }
+  .nl-chart-labels { display: flex; gap: 6px; margin: 6px 20px 0; padding: 0 4px; }
+  .nl-chart-labels span {
+    flex: 1;
+    text-align: center;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 10px;
+    color: #8a8375;
+    text-transform: uppercase;
+  }
+  .nl-chart-caption {
+    margin: 6px 20px 0;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 10.5px;
+    color: #8a8375;
+  }
+
+  /* Modal */
+  .nl-modal-bg {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(28,27,25,0.5);
+    z-index: 50;
+    align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .nl-modal-bg.show { display: flex; }
+  .nl-modal {
+    background: var(--paper);
+    border: 3px solid var(--ink);
+    max-width: 440px;
+    width: 100%;
+    padding: 24px;
+    max-height: calc(100vh - 40px);
+    max-height: calc(100dvh - 40px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .nl-modal h2 { margin: 0 0 6px; font-size: 20px; text-transform: uppercase; }
+  .nl-modal p { font-size: 13px; color: #565149; margin: 0 0 14px; line-height: 1.5; }
+  .nl-modal input[type=password], .nl-modal input[type=text] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid var(--ink);
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+  .nl-modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+  .nl-modal-actions button {
+    padding: 10px 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 13px;
+    cursor: pointer;
+    border: 2px solid var(--ink);
+  }
+  .nl-btn-primary { background: var(--forest); color: var(--paper); border-color: var(--forest) !important; }
+  .nl-btn-secondary { background: transparent; color: var(--ink); }
+  .nl-btn-danger { background: transparent; color: var(--rust); border-color: var(--rust) !important; margin-right: auto; }
+
+  @media (max-width: 640px) {
+    h1 { font-size: 26px; }
+    .nl-form { flex-direction: column; }
+    select, textarea, input[type=date], button.nl-add { width: 100%; }
+    .nl-summary-cell { min-width: 44%; }
+  }
+</style>
+</head>
+<body>
+<div id="root">
+  <div class="nl-header">
+    <div>
+      <p class="nl-eyebrow">— logged from typed descriptions —</p>
+      <h1>Nutrition Ledger</h1>
+      <p class="nl-sub">Type a meal in plain language. Each entry is parsed into full nutrition data and an estimated Rand cost, then added to your log.</p>
+    </div>
+    <button class="nl-gear" id="gear-btn" title="Settings">⚙</button>
+  </div>
+
+  <div class="nl-keybar" id="keybar">
+    <span class="dot"></span>
+    <span id="keybar-text">No API key set — </span>
+    <a id="keybar-link">add one</a>
+  </div>
+
+  <div class="nl-keybar" id="syncbar">
+    <span class="dot"></span>
+    <span id="syncbar-text">Cloud sync not set up — </span>
+    <a id="syncbar-link">set up</a>
+  </div>
+
+  <div class="nl-tabs">
+    <button class="nl-tab active" data-tab="log">Log</button>
+    <button class="nl-tab" data-tab="weekly">Weekly</button>
+    <button class="nl-tab" data-tab="monthly">Monthly</button>
+  </div>
+
+  <!-- LOG PANEL -->
+  <div class="nl-panel active" id="panel-log">
+    <div class="nl-form">
+      <input type="date" id="date-input">
+      <select id="mealtype">
+        <option>Breakfast</option>
+        <option>Lunch</option>
+        <option selected>Dinner</option>
+        <option>Snack</option>
+      </select>
+      <textarea id="meal-input" placeholder="e.g. 3 strawberries, 6 walnut halves, 10 blueberries, one Woolworths black cherry yoghurt tub single serving, and a Woolworths chicken breyani serving"></textarea>
+    </div>
+    <div style="padding: 0 20px;">
+      <button class="nl-add" id="add-btn">Add entry</button>
+    </div>
+
+    <div class="nl-error" id="error-box"></div>
+
+    <div class="nl-table-wrap">
+      <table id="nl-table">
+        <thead>
+          <tr>
+            <th>Meal</th><th>Description</th><th>Kcal</th><th>Protein g</th><th>Fat g</th>
+            <th>Carbs g</th><th>Sugar g</th><th>Fiber g</th><th>Sodium mg</th><th>Cost (R)</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+        <tfoot id="tfoot" style="display:none">
+          <tr>
+            <td>All-time total</td><td></td>
+            <td id="tot-kcal"></td><td id="tot-protein"></td><td id="tot-fat"></td>
+            <td id="tot-carbs"></td><td id="tot-sugar"></td><td id="tot-fiber"></td>
+            <td id="tot-sodium"></td><td id="tot-cost"></td><td></td>
+          </tr>
+        </tfoot>
+      </table>
+      <div class="nl-empty" id="empty-state">No entries yet. Log your first meal above.</div>
+    </div>
+  </div>
+
+  <!-- WEEKLY PANEL -->
+  <div class="nl-panel" id="panel-weekly">
+    <div class="nl-period-bar">
+      <select id="week-select"></select>
+      <span class="nl-period-label" id="week-label"></span>
+    </div>
+    <div class="nl-summary-strip" id="week-summary"></div>
+    <div class="nl-chart" id="week-chart"></div>
+    <div class="nl-chart-labels" id="week-chart-labels"></div>
+    <p class="nl-chart-caption">Calories per day</p>
+    <div class="nl-table-wrap">
+      <table id="week-table">
+        <thead>
+          <tr><th>Day</th><th>Date</th><th>Kcal</th><th>Protein g</th><th>Fat g</th><th>Carbs g</th><th>Sugar g</th><th>Fiber g</th><th>Sodium mg</th><th>Cost (R)</th></tr>
+        </thead>
+        <tbody id="week-tbody"></tbody>
+      </table>
+      <div class="nl-empty" id="week-empty">No entries logged yet.</div>
+    </div>
+  </div>
+
+  <!-- MONTHLY PANEL -->
+  <div class="nl-panel" id="panel-monthly">
+    <div class="nl-period-bar">
+      <select id="month-select"></select>
+      <span class="nl-period-label" id="month-label"></span>
+    </div>
+    <div class="nl-summary-strip" id="month-summary"></div>
+    <div class="nl-chart" id="month-chart"></div>
+    <div class="nl-chart-labels" id="month-chart-labels"></div>
+    <p class="nl-chart-caption" id="month-chart-caption">Calories per week</p>
+    <div class="nl-table-wrap">
+      <table id="month-table">
+        <thead>
+          <tr><th>Week</th><th>Days logged</th><th>Kcal</th><th>Protein g</th><th>Fat g</th><th>Carbs g</th><th>Sugar g</th><th>Fiber g</th><th>Sodium mg</th><th>Cost (R)</th></tr>
+        </thead>
+        <tbody id="month-tbody"></tbody>
+      </table>
+      <div class="nl-empty" id="month-empty">No entries logged yet.</div>
+    </div>
+  </div>
+
+  <p class="nl-footnote">Figures are AI-estimated using web-sourced nutrition data (incl. Woolworths SA product info where relevant) — approximate, not medical or lab-grade. The dashed target line on the Weekly/Monthly charts is a standard Mifflin-St Jeor estimate (edit it under the gear icon) — a general starting point, not a prescription. It doesn't account for NAFLD, thyroid replacement therapy, or gastritis; loop in your doctor or a dietitian before committing to a target, since weight change can affect thyroid medication dosing and NAFLD management benefits from gradual, supervised loss. Entries and your API key are stored only in this browser, on this device.</p>
+</div>
+
+<div class="nl-modal-bg" id="modal-bg">
+  <div class="nl-modal">
+    <h2>API key</h2>
+    <p>Your Anthropic API key is stored only in this browser's local storage on this device — it's sent directly from your browser to Anthropic and nowhere else. Get one at <span class="mono">console.anthropic.com</span>, under API Keys. Each meal lookup uses a small amount of your own API usage.</p>
+    <input type="password" id="key-input" placeholder="sk-ant-...">
+    <div class="nl-modal-actions">
+      <button class="nl-btn-danger" id="clear-key-btn">Remove key</button>
+      <button class="nl-btn-secondary" id="cancel-modal-btn">Cancel</button>
+      <button class="nl-btn-primary" id="save-key-btn">Save</button>
+    </div>
+
+    <h2 style="margin-top:22px;">Calorie target</h2>
+    <p>Used to draw the target line on the Weekly/Monthly charts. A standard estimate (Mifflin-St Jeor), not a medical prescription — see the note under the charts.</p>
+    <div style="display:flex; gap:8px; margin-bottom:10px;">
+      <select id="profile-sex" style="flex:1; height:40px;">
+        <option value="male">Male</option>
+        <option value="female">Female</option>
+      </select>
+      <input type="number" id="profile-age" placeholder="Age" style="flex:1; padding:10px; border:2px solid var(--ink); font-family:'SFMono-Regular',Consolas,monospace; font-size:13px;">
+    </div>
+    <div style="display:flex; gap:8px; margin-bottom:10px;">
+      <input type="number" id="profile-height" placeholder="Height (cm)" style="flex:1; padding:10px; border:2px solid var(--ink); font-family:'SFMono-Regular',Consolas,monospace; font-size:13px;">
+      <input type="number" id="profile-weight" placeholder="Current weight (kg)" style="flex:1; padding:10px; border:2px solid var(--ink); font-family:'SFMono-Regular',Consolas,monospace; font-size:13px;">
+    </div>
+    <div style="display:flex; gap:8px; margin-bottom:10px;">
+      <select id="profile-activity" style="flex:1; height:40px;">
+        <option value="1.2">Sedentary</option>
+        <option value="1.375">Lightly active</option>
+        <option value="1.55">Moderately active</option>
+        <option value="1.725">Very active</option>
+      </select>
+      <input type="number" id="profile-deficit" placeholder="Daily deficit (kcal)" style="flex:1; padding:10px; border:2px solid var(--ink); font-family:'SFMono-Regular',Consolas,monospace; font-size:13px;">
+    </div>
+    <div class="nl-modal-actions">
+      <button class="nl-btn-secondary" id="cancel-profile-btn">Cancel</button>
+      <button class="nl-btn-primary" id="save-profile-btn">Save target</button>
+    </div>
+
+    <p style="margin-top:16px; font-size:11.5px;">Nutrition lookups are cached and reused for 6 months so repeat meals don't re-query the API. <a id="clear-cache-link" style="color:var(--rust); text-decoration:underline; cursor:pointer;">Clear cache</a> to force fresh lookups.</p>
+
+    <h2 style="margin-top:22px;">Cloud sync</h2>
+    <p>Lets the same log appear on your laptop and phone. Uses <span class="mono">jsonbin.io</span> (free, no card needed) as private cloud storage — your entries are stored there, accessible only with the key below. Set this up once, then enter the <em>same</em> API key and Sync ID on every device.</p>
+    <input type="password" id="sync-key-input" placeholder="jsonbin.io X-Master-Key">
+    <input type="text" id="sync-bin-input" placeholder="Sync ID (leave blank on first device to create one)">
+    <p id="sync-status-text" style="font-size:11.5px; color:#8a8375; margin:-6px 0 12px;"></p>
+    <div class="nl-modal-actions">
+      <button class="nl-btn-danger" id="clear-sync-btn">Turn off sync</button>
+      <button class="nl-btn-secondary" id="cancel-sync-btn">Cancel</button>
+      <button class="nl-btn-primary" id="save-sync-btn">Save &amp; sync</button>
+    </div>
+  </div>
+</div>
+
+<div class="nl-modal-bg" id="breakdown-modal-bg">
+  <div class="nl-modal" style="max-width:640px;">
+    <h2 id="bd-title" style="font-size:17px; text-transform:none;">Meal breakdown</h2>
+    <p id="bd-meta" class="mono" style="font-size:11.5px; color:#8a8375; margin-bottom:16px;"></p>
+    <div style="overflow-x:auto; margin-bottom:12px;">
+      <table style="width:100%; border-collapse:collapse; font-size:12.5px;">
+        <thead>
+          <tr>
+            <th style="text-align:left; padding:6px 8px; border-bottom:2px solid var(--ink); font-family:'SFMono-Regular',Consolas,monospace; font-size:10px; text-transform:uppercase;">Item</th>
+            <th style="text-align:right; padding:6px 8px; border-bottom:2px solid var(--ink); font-family:'SFMono-Regular',Consolas,monospace; font-size:10px; text-transform:uppercase;">Kcal</th>
+            <th style="text-align:right; padding:6px 8px; border-bottom:2px solid var(--ink); font-family:'SFMono-Regular',Consolas,monospace; font-size:10px; text-transform:uppercase;">Protein</th>
+            <th style="text-align:right; padding:6px 8px; border-bottom:2px solid var(--ink); font-family:'SFMono-Regular',Consolas,monospace; font-size:10px; text-transform:uppercase;">Fat</th>
+            <th style="text-align:right; padding:6px 8px; border-bottom:2px solid var(--ink); font-family:'SFMono-Regular',Consolas,monospace; font-size:10px; text-transform:uppercase;">Carbs</th>
+            <th style="text-align:right; padding:6px 8px; border-bottom:2px solid var(--ink); font-family:'SFMono-Regular',Consolas,monospace; font-size:10px; text-transform:uppercase;">Sugar</th>
+            <th style="text-align:right; padding:6px 8px; border-bottom:2px solid var(--ink); font-family:'SFMono-Regular',Consolas,monospace; font-size:10px; text-transform:uppercase;">Cost R</th>
+          </tr>
+        </thead>
+        <tbody id="bd-tbody"></tbody>
+        <tfoot>
+          <tr id="bd-total-row" style="font-weight:700; font-family:'SFMono-Regular',Consolas,monospace;">
+            <td style="padding:8px; border-top:3px solid var(--ink);">Total</td>
+            <td id="bd-tot-kcal" style="text-align:right; padding:8px; border-top:3px solid var(--ink);"></td>
+            <td id="bd-tot-protein" style="text-align:right; padding:8px; border-top:3px solid var(--ink);"></td>
+            <td id="bd-tot-fat" style="text-align:right; padding:8px; border-top:3px solid var(--ink);"></td>
+            <td id="bd-tot-carbs" style="text-align:right; padding:8px; border-top:3px solid var(--ink);"></td>
+            <td id="bd-tot-sugar" style="text-align:right; padding:8px; border-top:3px solid var(--ink);"></td>
+            <td id="bd-tot-cost" style="text-align:right; padding:8px; border-top:3px solid var(--ink);"></td>
+          </tr>
+        </tfoot>
+      </table>
+      <p id="bd-empty" style="display:none; font-size:12.5px; color:#8a8375; padding:12px 0;">No itemized breakdown was saved for this entry (it was logged before this feature was added) — only the meal total is available.</p>
+    </div>
+    <p id="bd-notes" style="font-size:12px; color:#565149; font-style:italic; margin-bottom:16px;"></p>
+    <div class="nl-modal-actions">
+      <button class="nl-btn-secondary" id="close-breakdown-btn">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const KEY_STORAGE = 'nl_api_key';
+  const ENTRIES_STORAGE = 'nl_entries';
+  const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const NUTRIENT_KEYS = ['calories_kcal','protein_g','fat_g','carbs_g','sugar_g','fiber_g','sodium_mg','cost_zar'];
+
+  const tbody = document.getElementById('tbody');
+  const tfoot = document.getElementById('tfoot');
+  const empty = document.getElementById('empty-state');
+  const errBox = document.getElementById('error-box');
+  const addBtn = document.getElementById('add-btn');
+  const input = document.getElementById('meal-input');
+  const mealSelect = document.getElementById('mealtype');
+  const dateInput = document.getElementById('date-input');
+  const keybar = document.getElementById('keybar');
+  const keybarText = document.getElementById('keybar-text');
+
+  const gearBtn = document.getElementById('gear-btn');
+  const modalBg = document.getElementById('modal-bg');
+  const keyInput = document.getElementById('key-input');
+  const saveKeyBtn = document.getElementById('save-key-btn');
+  const cancelModalBtn = document.getElementById('cancel-modal-btn');
+  const clearKeyBtn = document.getElementById('clear-key-btn');
+  const keybarLink = document.getElementById('keybar-link');
+
+  let entries = [];
+
+  // ---------- date helpers ----------
+  function localDateStr(d) {
+    const off = d.getTimezoneOffset();
+    const local = new Date(d.getTime() - off * 60000);
+    return local.toISOString().slice(0, 10);
+  }
+  function todayStr() { return localDateStr(new Date()); }
+  function parseLocalDate(dateStr) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  function addDays(dateStr, n) {
+    const d = parseLocalDate(dateStr);
+    d.setDate(d.getDate() + n);
+    return localDateStr(d);
+  }
+  function weekdayIndexMon0(dateStr) {
+    const d = parseLocalDate(dateStr);
+    return (d.getDay() + 6) % 7; // Mon=0 ... Sun=6
+  }
+  function weekStartOf(dateStr) { return addDays(dateStr, -weekdayIndexMon0(dateStr)); }
+  function formatShort(dateStr) {
+    const d = parseLocalDate(dateStr);
+    return d.getDate() + ' ' + MONTH_NAMES[d.getMonth()].slice(0, 3);
+  }
+  function formatDayHeader(dateStr) {
+    const d = parseLocalDate(dateStr);
+    const dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
+    return dow + ', ' + d.getDate() + ' ' + MONTH_NAMES[d.getMonth()] + ' ' + d.getFullYear();
+  }
+  function weekRangeLabel(weekStart) {
+    const end = addDays(weekStart, 6);
+    return formatShort(weekStart) + ' – ' + formatShort(end) + ' ' + parseLocalDate(end).getFullYear();
+  }
+  function monthLabel(monthKey) {
+    const [y, m] = monthKey.split('-').map(Number);
+    return MONTH_NAMES[m - 1] + ' ' + y;
+  }
+
+  function fmt(n, d) {
+    if (n === null || n === undefined || isNaN(n)) return '—';
+    return Number(n).toFixed(d === undefined ? 0 : d);
+  }
+  function showError(msg) { errBox.textContent = msg; errBox.classList.add('show'); }
+  function clearError() { errBox.classList.remove('show'); errBox.textContent = ''; }
+
+  // ---------- key management ----------
+  function getKey() { try { return localStorage.getItem(KEY_STORAGE) || ''; } catch (e) { return ''; } }
+  function refreshKeybar() {
+    const key = getKey();
+    if (key) {
+      keybar.classList.add('show', 'ok');
+      keybarText.textContent = 'API key saved (' + key.slice(0, 10) + '…) — ';
+      keybarLink.textContent = 'change';
+    } else {
+      keybar.classList.add('show');
+      keybar.classList.remove('ok');
+      keybarText.textContent = 'No API key set — ';
+      keybarLink.textContent = 'add one';
+    }
+  }
+  function openModal() {
+    keyInput.value = getKey();
+    populateProfileForm();
+    const { key, bin } = getSyncConfig();
+    document.getElementById('sync-key-input').value = key;
+    document.getElementById('sync-bin-input').value = bin;
+    document.getElementById('sync-status-text').textContent = bin ? ('Sync ID: ' + bin) : 'Not yet connected.';
+    modalBg.classList.add('show');
+  }
+  function closeModal() { modalBg.classList.remove('show'); }
+  document.getElementById('syncbar-link').addEventListener('click', openModal);
+  gearBtn.addEventListener('click', openModal);
+  keybarLink.addEventListener('click', openModal);
+  cancelModalBtn.addEventListener('click', closeModal);
+  modalBg.addEventListener('click', (e) => { if (e.target === modalBg) closeModal(); });
+  saveKeyBtn.addEventListener('click', () => {
+    const v = keyInput.value.trim();
+    if (v) { try { localStorage.setItem(KEY_STORAGE, v); } catch (e) {} }
+    refreshKeybar();
+    closeModal();
+  });
+  clearKeyBtn.addEventListener('click', () => {
+    try { localStorage.removeItem(KEY_STORAGE); } catch (e) {}
+    refreshKeybar();
+    closeModal();
+  });
+
+  // ---------- health profile / calorie target ----------
+  const PROFILE_STORAGE = 'nl_profile';
+  const DEFAULT_PROFILE = { sex: 'male', age: 47, height_cm: 177, weight_kg: 90, activity: 1.2, deficit: 500 };
+
+  function getProfile() {
+    try {
+      const raw = localStorage.getItem(PROFILE_STORAGE);
+      return raw ? Object.assign({}, DEFAULT_PROFILE, JSON.parse(raw)) : Object.assign({}, DEFAULT_PROFILE);
+    } catch (e) { return Object.assign({}, DEFAULT_PROFILE); }
+  }
+  function saveProfile(p) {
+    try { localStorage.setItem(PROFILE_STORAGE, JSON.stringify(p)); } catch (e) {}
+  }
+  function computeDailyTarget() {
+    const p = getProfile();
+    const bmr = p.sex === 'male'
+      ? 10 * p.weight_kg + 6.25 * p.height_cm - 5 * p.age + 5
+      : 10 * p.weight_kg + 6.25 * p.height_cm - 5 * p.age - 161;
+    const tdee = bmr * Number(p.activity);
+    let target = tdee - Number(p.deficit);
+    const floor = p.sex === 'male' ? 1500 : 1200;
+    if (target < floor) target = floor;
+    return Math.round(target);
+  }
+  function populateProfileForm() {
+    const p = getProfile();
+    document.getElementById('profile-sex').value = p.sex;
+    document.getElementById('profile-age').value = p.age;
+    document.getElementById('profile-height').value = p.height_cm;
+    document.getElementById('profile-weight').value = p.weight_kg;
+    document.getElementById('profile-activity').value = p.activity;
+    document.getElementById('profile-deficit').value = p.deficit;
+  }
+  document.getElementById('save-profile-btn').addEventListener('click', () => {
+    const p = {
+      sex: document.getElementById('profile-sex').value,
+      age: Number(document.getElementById('profile-age').value) || DEFAULT_PROFILE.age,
+      height_cm: Number(document.getElementById('profile-height').value) || DEFAULT_PROFILE.height_cm,
+      weight_kg: Number(document.getElementById('profile-weight').value) || DEFAULT_PROFILE.weight_kg,
+      activity: Number(document.getElementById('profile-activity').value) || DEFAULT_PROFILE.activity,
+      deficit: Number(document.getElementById('profile-deficit').value) || 0
+    };
+    saveProfile(p);
+    closeModal();
+    renderWeekly();
+    renderMonthly();
+  });
+  document.getElementById('cancel-profile-btn').addEventListener('click', closeModal);
+  document.getElementById('cancel-sync-btn').addEventListener('click', closeModal);
+  document.getElementById('clear-sync-btn').addEventListener('click', () => {
+    clearSyncConfig();
+    refreshSyncbar();
+    closeModal();
+  });
+  document.getElementById('save-sync-btn').addEventListener('click', async () => {
+    const key = document.getElementById('sync-key-input').value.trim();
+    let bin = document.getElementById('sync-bin-input').value.trim();
+    const statusEl = document.getElementById('sync-status-text');
+    if (!key) { statusEl.textContent = 'Enter your jsonbin.io API key first.'; return; }
+    statusEl.textContent = 'Connecting…';
+    try {
+      if (!bin) {
+        bin = await createSyncBin(key);
+        document.getElementById('sync-bin-input').value = bin;
+      }
+      saveSyncConfig(key, bin);
+      refreshSyncbar();
+      statusEl.textContent = 'Connected. Sync ID: ' + bin + ' — copy this (with the API key) into the other device\'s settings.';
+      await syncNow();
+    } catch (e) {
+      statusEl.textContent = 'Could not connect: ' + e.message;
+    }
+  });
+  document.getElementById('clear-cache-link').addEventListener('click', () => {
+    clearCache();
+    alert('Cache cleared — future entries will do a fresh lookup.');
+  });
+
+  // ---------- lookup cache (reuse prior nutrition lookups within 6 months) ----------
+  const CACHE_STORAGE = 'nl_cache';
+  const CACHE_MONTHS = 6;
+
+  function normalizeDesc(s) {
+    return s.trim().toLowerCase().replace(/\s+/g, ' ').replace(/[.,;!?]+$/, '');
+  }
+  function getCache() {
+    try { return JSON.parse(localStorage.getItem(CACHE_STORAGE) || '{}'); } catch (e) { return {}; }
+  }
+  function saveCache(cache) {
+    try { localStorage.setItem(CACHE_STORAGE, JSON.stringify(cache)); } catch (e) {}
+  }
+  function isFresh(isoDate) {
+    const cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - CACHE_MONTHS);
+    return new Date(isoDate) > cutoff;
+  }
+  function getCachedLookup(description) {
+    const cache = getCache();
+    const entry = cache[normalizeDesc(description)];
+    if (entry && isFresh(entry.cachedAt)) return entry;
+    return null;
+  }
+  function storeCachedLookup(description, data) {
+    const cache = getCache();
+    cache[normalizeDesc(description)] = { data: data, cachedAt: new Date().toISOString() };
+    saveCache(cache);
+  }
+  function clearCache() {
+    try { localStorage.removeItem(CACHE_STORAGE); } catch (e) {}
+  }
+
+  // ---------- tabs ----------
+  document.querySelectorAll('.nl-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.nl-tab').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.nl-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+      if (btn.dataset.tab === 'weekly') renderWeekly();
+      if (btn.dataset.tab === 'monthly') renderMonthly();
+    });
+  });
+
+  // ---------- storage ----------
+  function loadEntries() {
+    try {
+      const raw = localStorage.getItem(ENTRIES_STORAGE);
+      entries = raw ? JSON.parse(raw) : [];
+      // backfill date field for any legacy entries without one
+      entries.forEach(e => { if (!e.date) e.date = (e.loggedAt || '').slice(0, 10) || todayStr(); });
+    } catch (e) { entries = []; }
+  }
+  function saveEntries() {
+    try { localStorage.setItem(ENTRIES_STORAGE, JSON.stringify(entries)); }
+    catch (e) { showError('Could not save locally — storage may be full or blocked.'); }
+    pushToCloud();
+  }
+
+  // ---------- cloud sync (jsonbin.io) ----------
+  const SYNC_KEY_STORAGE = 'nl_sync_key';
+  const SYNC_BIN_STORAGE = 'nl_sync_bin';
+  const JSONBIN_BASE = 'https://api.jsonbin.io/v3/b';
+
+  function getSyncConfig() {
+    let key = '', bin = '';
+    try { key = localStorage.getItem(SYNC_KEY_STORAGE) || ''; } catch (e) {}
+    try { bin = localStorage.getItem(SYNC_BIN_STORAGE) || ''; } catch (e) {}
+    return { key, bin };
+  }
+  function saveSyncConfig(key, bin) {
+    try { localStorage.setItem(SYNC_KEY_STORAGE, key); } catch (e) {}
+    try { localStorage.setItem(SYNC_BIN_STORAGE, bin); } catch (e) {}
+  }
+  function clearSyncConfig() {
+    try { localStorage.removeItem(SYNC_KEY_STORAGE); localStorage.removeItem(SYNC_BIN_STORAGE); } catch (e) {}
+  }
+  function refreshSyncbar(statusOverride) {
+    const { key, bin } = getSyncConfig();
+    const syncbar = document.getElementById('syncbar');
+    const text = document.getElementById('syncbar-text');
+    const link = document.getElementById('syncbar-link');
+    if (key && bin) {
+      syncbar.classList.add('show', 'ok');
+      text.textContent = statusOverride || ('Cloud sync on (ID …' + bin.slice(-6) + ') — ');
+      link.textContent = 'manage';
+    } else {
+      syncbar.classList.add('show');
+      syncbar.classList.remove('ok');
+      text.textContent = 'Cloud sync not set up — ';
+      link.textContent = 'set up';
+    }
+  }
+  let syncInFlight = false;
+  async function pushToCloud() {
+    const { key, bin } = getSyncConfig();
+    if (!key || !bin || syncInFlight) return;
+    try {
+      const res = await fetch(`${JSONBIN_BASE}/${bin}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Master-Key': key },
+        body: JSON.stringify(entries)
+      });
+      if (res.ok) refreshSyncbar('Synced ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) + ' — ');
+      else refreshSyncbar('Sync push failed (' + res.status + ') — ');
+    } catch (e) { refreshSyncbar('Sync push failed (offline?) — '); }
+  }
+  async function pullFromCloud() {
+    const { key, bin } = getSyncConfig();
+    if (!key || !bin) return null;
+    try {
+      const res = await fetch(`${JSONBIN_BASE}/${bin}/latest`, {
+        headers: { 'X-Master-Key': key }
+      });
+      if (!res.ok) { refreshSyncbar('Sync pull failed (' + res.status + ') — '); return null; }
+      const data = await res.json();
+      return Array.isArray(data.record) ? data.record : [];
+    } catch (e) { refreshSyncbar('Sync pull failed (offline?) — '); return null; }
+  }
+  async function createSyncBin(key) {
+    const res = await fetch(JSONBIN_BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Key': key, 'X-Bin-Name': 'nutrition-ledger' },
+      body: JSON.stringify(entries)
+    });
+    if (!res.ok) throw new Error('Could not create sync store (' + res.status + ')');
+    const data = await res.json();
+    return data.metadata.id;
+  }
+  async function syncNow() {
+    syncInFlight = true;
+    refreshSyncbar('Syncing… — ');
+    const remote = await pullFromCloud();
+    if (remote) {
+      const byId = {};
+      entries.forEach(e => byId[e.id] = e);
+      remote.forEach(e => byId[e.id] = byId[e.id] || e);
+      entries = Object.values(byId);
+      try { localStorage.setItem(ENTRIES_STORAGE, JSON.stringify(entries)); } catch (e) {}
+      renderAll();
+    }
+    syncInFlight = false;
+    await pushToCloud();
+  }
+
+  // ---------- LOG panel rendering ----------
+  function renderRow(entry) {
+    const tr = document.createElement('tr');
+    tr.dataset.id = entry.id;
+    tr.className = 'nl-entry-row';
+    tr.innerHTML = `
+      <td><span class="nl-meal-tag">${entry.mealType}</span>${entry.fromCache ? ' <span class="nl-meal-tag" style="border-color:#8a8375;color:#8a8375;">cached</span>' : ''}</td>
+      <td class="nl-desc" title="${entry.description.replace(/"/g, '&quot;')}">${entry.description}</td>
+      <td class="mono">${fmt(entry.calories_kcal)}</td>
+      <td class="mono">${fmt(entry.protein_g, 1)}</td>
+      <td class="mono">${fmt(entry.fat_g, 1)}</td>
+      <td class="mono">${fmt(entry.carbs_g, 1)}</td>
+      <td class="mono">${fmt(entry.sugar_g, 1)}</td>
+      <td class="mono">${fmt(entry.fiber_g, 1)}</td>
+      <td class="mono">${fmt(entry.sodium_mg)}</td>
+      <td class="mono">${entry.cost_zar !== null && entry.cost_zar !== undefined ? fmt(entry.cost_zar, 2) : '—'}</td>
+      <td><button class="nl-del" data-id="${entry.id}" title="Remove">✕</button></td>
+    `;
+    return tr;
+  }
+  function sumEntries(list) {
+    const out = {};
+    NUTRIENT_KEYS.forEach(k => out[k] = list.reduce((a, e) => a + (Number(e[k]) || 0), 0));
+    return out;
+  }
+  function renderAll() {
+    tbody.innerHTML = '';
+    if (entries.length === 0) {
+      empty.style.display = 'block';
+      tfoot.style.display = 'none';
+      return;
+    }
+    empty.style.display = 'none';
+    tfoot.style.display = '';
+
+    const sorted = [...entries].sort((a, b) => (b.date + b.loggedAt).localeCompare(a.date + a.loggedAt));
+    let currentDate = null;
+    let dayBucket = [];
+    const flushDay = () => {
+      if (!dayBucket.length) return;
+      const s = sumEntries(dayBucket);
+      const tr = document.createElement('tr');
+      tr.className = 'nl-day-subtotal';
+      tr.innerHTML = `<td>Day total</td><td></td><td class="mono">${fmt(s.calories_kcal)}</td><td class="mono">${fmt(s.protein_g,1)}</td><td class="mono">${fmt(s.fat_g,1)}</td><td class="mono">${fmt(s.carbs_g,1)}</td><td class="mono">${fmt(s.sugar_g,1)}</td><td class="mono">${fmt(s.fiber_g,1)}</td><td class="mono">${fmt(s.sodium_mg)}</td><td class="mono">R${fmt(s.cost_zar,2)}</td><td></td>`;
+      tbody.appendChild(tr);
+    };
+    sorted.forEach(e => {
+      if (e.date !== currentDate) {
+        flushDay();
+        dayBucket = [];
+        currentDate = e.date;
+        const hr = document.createElement('tr');
+        hr.className = 'nl-day-header';
+        hr.innerHTML = `<td colspan="11">${formatDayHeader(e.date)}</td>`;
+        tbody.appendChild(hr);
+      }
+      dayBucket.push(e);
+      tbody.appendChild(renderRow(e));
+    });
+    flushDay();
+
+    const s = sumEntries(entries);
+    document.getElementById('tot-kcal').textContent = fmt(s.calories_kcal);
+    document.getElementById('tot-protein').textContent = fmt(s.protein_g, 1);
+    document.getElementById('tot-fat').textContent = fmt(s.fat_g, 1);
+    document.getElementById('tot-carbs').textContent = fmt(s.carbs_g, 1);
+    document.getElementById('tot-sugar').textContent = fmt(s.sugar_g, 1);
+    document.getElementById('tot-fiber').textContent = fmt(s.fiber_g, 1);
+    document.getElementById('tot-sodium').textContent = fmt(s.sodium_mg);
+    document.getElementById('tot-cost').textContent = 'R' + fmt(s.cost_zar, 2);
+  }
+
+  // ---------- chart helper ----------
+  function renderChart(chartEl, labelsEl, values, labels, targetValue, targetTag) {
+    chartEl.innerHTML = '';
+    labelsEl.innerHTML = '';
+    const max = Math.max(1, ...values, targetValue || 0);
+    values.forEach((v, i) => {
+      const col = document.createElement('div');
+      col.className = 'nl-chart-col';
+      const pct = v > 0 ? Math.max(4, (v / max) * 100) : 0;
+      col.innerHTML = `<span class="nl-chart-val">${v > 0 ? fmt(v) : ''}</span><div class="nl-chart-bar${v > 0 ? '' : ' empty'}" style="height:${v > 0 ? pct : 2}%"></div>`;
+      chartEl.appendChild(col);
+      const lbl = document.createElement('span');
+      lbl.textContent = labels[i];
+      labelsEl.appendChild(lbl);
+    });
+    if (targetValue) {
+      const linePct = Math.min(100, (targetValue / max) * 100);
+      const line = document.createElement('div');
+      line.className = 'nl-target-line';
+      line.style.bottom = linePct + '%';
+      line.innerHTML = `<span class="nl-target-tag">${targetTag || ('Target ' + fmt(targetValue))}</span>`;
+      chartEl.appendChild(line);
+    }
+  }
+
+  // ---------- WEEKLY panel ----------
+  const weekSelect = document.getElementById('week-select');
+  const weekLabel = document.getElementById('week-label');
+  const weekSummary = document.getElementById('week-summary');
+  const weekTbody = document.getElementById('week-tbody');
+  const weekEmpty = document.getElementById('week-empty');
+
+  function getWeekOptions() {
+    const set = new Set(entries.map(e => weekStartOf(e.date)));
+    set.add(weekStartOf(todayStr()));
+    return [...set].sort().reverse();
+  }
+  function populateWeekSelect() {
+    const opts = getWeekOptions();
+    const prevVal = weekSelect.value;
+    weekSelect.innerHTML = opts.map(ws => `<option value="${ws}">${weekRangeLabel(ws)}</option>`).join('');
+    weekSelect.value = opts.includes(prevVal) ? prevVal : opts[0];
+  }
+  function renderWeekly() {
+    if (entries.length === 0) {
+      weekEmpty.style.display = 'block';
+      weekTbody.innerHTML = '';
+      weekSummary.innerHTML = '';
+      document.getElementById('week-chart').innerHTML = '';
+      document.getElementById('week-chart-labels').innerHTML = '';
+      weekSelect.innerHTML = '';
+      weekLabel.textContent = '';
+      return;
+    }
+    weekEmpty.style.display = 'none';
+    populateWeekSelect();
+    const weekStart = weekSelect.value;
+    weekLabel.textContent = weekRangeLabel(weekStart);
+
+    const dayTotals = [];
+    const dayDates = [];
+    for (let i = 0; i < 7; i++) {
+      const ds = addDays(weekStart, i);
+      dayDates.push(ds);
+      const dayEntries = entries.filter(e => e.date === ds);
+      dayTotals.push(sumEntries(dayEntries));
+    }
+
+    weekTbody.innerHTML = dayTotals.map((s, i) => {
+      const hasData = s.calories_kcal > 0 || entries.some(e => e.date === dayDates[i]);
+      return `<tr>
+        <td>${DAY_NAMES[i]}</td>
+        <td class="mono">${formatShort(dayDates[i])}</td>
+        <td class="mono">${hasData ? fmt(s.calories_kcal) : '—'}</td>
+        <td class="mono">${hasData ? fmt(s.protein_g,1) : '—'}</td>
+        <td class="mono">${hasData ? fmt(s.fat_g,1) : '—'}</td>
+        <td class="mono">${hasData ? fmt(s.carbs_g,1) : '—'}</td>
+        <td class="mono">${hasData ? fmt(s.sugar_g,1) : '—'}</td>
+        <td class="mono">${hasData ? fmt(s.fiber_g,1) : '—'}</td>
+        <td class="mono">${hasData ? fmt(s.sodium_mg) : '—'}</td>
+        <td class="mono">${hasData ? 'R'+fmt(s.cost_zar,2) : '—'}</td>
+      </tr>`;
+    }).join('');
+
+    const weekEntries = entries.filter(e => dayDates.includes(e.date));
+    const weekTotal = sumEntries(weekEntries);
+    const loggedDays = new Set(weekEntries.map(e => e.date)).size || 1;
+
+    const dailyTarget = computeDailyTarget();
+
+    weekSummary.innerHTML = `
+      <div class="nl-summary-cell"><span class="lbl">Week total kcal</span><span class="val">${fmt(weekTotal.calories_kcal)}</span></div>
+      <div class="nl-summary-cell"><span class="lbl">Avg kcal / logged day</span><span class="val">${fmt(weekTotal.calories_kcal / loggedDays)}</span></div>
+      <div class="nl-summary-cell"><span class="lbl">Daily target</span><span class="val">${fmt(dailyTarget)}</span></div>
+      <div class="nl-summary-cell"><span class="lbl">Week total cost</span><span class="val">R${fmt(weekTotal.cost_zar,2)}</span></div>
+    `;
+
+    renderChart(document.getElementById('week-chart'), document.getElementById('week-chart-labels'),
+      dayTotals.map(s => s.calories_kcal), DAY_NAMES, dailyTarget, 'Target ' + fmt(dailyTarget) + '/day');
+  }
+  weekSelect.addEventListener('change', renderWeekly);
+
+  // ---------- MONTHLY panel ----------
+  const monthSelect = document.getElementById('month-select');
+  const monthLabelEl = document.getElementById('month-label');
+  const monthSummary = document.getElementById('month-summary');
+  const monthTbody = document.getElementById('month-tbody');
+  const monthEmpty = document.getElementById('month-empty');
+
+  function getMonthOptions() {
+    const set = new Set(entries.map(e => e.date.slice(0, 7)));
+    set.add(todayStr().slice(0, 7));
+    return [...set].sort().reverse();
+  }
+  function populateMonthSelect() {
+    const opts = getMonthOptions();
+    const prevVal = monthSelect.value;
+    monthSelect.innerHTML = opts.map(m => `<option value="${m}">${monthLabel(m)}</option>`).join('');
+    monthSelect.value = opts.includes(prevVal) ? prevVal : opts[0];
+  }
+  function daysInMonth(monthKey) {
+    const [y, m] = monthKey.split('-').map(Number);
+    return new Date(y, m, 0).getDate();
+  }
+  function renderMonthly() {
+    if (entries.length === 0) {
+      monthEmpty.style.display = 'block';
+      monthTbody.innerHTML = '';
+      monthSummary.innerHTML = '';
+      document.getElementById('month-chart').innerHTML = '';
+      document.getElementById('month-chart-labels').innerHTML = '';
+      monthSelect.innerHTML = '';
+      monthLabelEl.textContent = '';
+      return;
+    }
+    monthEmpty.style.display = 'none';
+    populateMonthSelect();
+    const monthKey = monthSelect.value;
+    monthLabelEl.textContent = monthLabel(monthKey);
+
+    const totalDays = daysInMonth(monthKey);
+    const numWeeks = Math.ceil(totalDays / 7);
+    const weekTotals = [];
+    const weekLabels = [];
+    const weekLoggedDays = [];
+    for (let w = 0; w < numWeeks; w++) {
+      const startDay = w * 7 + 1;
+      const endDay = Math.min(totalDays, startDay + 6);
+      const weekEntries = entries.filter(e => {
+        if (e.date.slice(0, 7) !== monthKey) return false;
+        const day = Number(e.date.slice(8, 10));
+        return day >= startDay && day <= endDay;
+      });
+      weekTotals.push(sumEntries(weekEntries));
+      weekLabels.push('Wk ' + (w + 1));
+      weekLoggedDays.push(new Set(weekEntries.map(e => e.date)).size);
+    }
+
+    monthTbody.innerHTML = weekTotals.map((s, i) => {
+      const hasData = weekLoggedDays[i] > 0;
+      return `<tr>
+        <td>${weekLabels[i]}</td>
+        <td class="mono">${weekLoggedDays[i]}</td>
+        <td class="mono">${hasData ? fmt(s.calories_kcal) : '—'}</td>
+        <td class="mono">${hasData ? fmt(s.protein_g,1) : '—'}</td>
+        <td class="mono">${hasData ? fmt(s.fat_g,1) : '—'}</td>
+        <td class="mono">${hasData ? fmt(s.carbs_g,1) : '—'}</td>
+        <td class="mono">${hasData ? fmt(s.sugar_g,1) : '—'}</td>
+        <td class="mono">${hasData ? fmt(s.fiber_g,1) : '—'}</td>
+        <td class="mono">${hasData ? fmt(s.sodium_mg) : '—'}</td>
+        <td class="mono">${hasData ? 'R'+fmt(s.cost_zar,2) : '—'}</td>
+      </tr>`;
+    }).join('');
+
+    const monthEntries = entries.filter(e => e.date.slice(0, 7) === monthKey);
+    const monthTotal = sumEntries(monthEntries);
+    const loggedDays = new Set(monthEntries.map(e => e.date)).size || 1;
+
+    const dailyTarget = computeDailyTarget();
+    const weeklyTarget = dailyTarget * 7;
+
+    monthSummary.innerHTML = `
+      <div class="nl-summary-cell"><span class="lbl">Month total kcal</span><span class="val">${fmt(monthTotal.calories_kcal)}</span></div>
+      <div class="nl-summary-cell"><span class="lbl">Avg kcal / logged day</span><span class="val">${fmt(monthTotal.calories_kcal / loggedDays)}</span></div>
+      <div class="nl-summary-cell"><span class="lbl">Days logged</span><span class="val">${loggedDays} / ${totalDays}</span></div>
+      <div class="nl-summary-cell"><span class="lbl">Month total cost</span><span class="val">R${fmt(monthTotal.cost_zar,2)}</span></div>
+    `;
+
+    renderChart(document.getElementById('month-chart'), document.getElementById('month-chart-labels'),
+      weekTotals.map(s => s.calories_kcal), weekLabels, weeklyTarget, 'Target ' + fmt(weeklyTarget) + '/wk');
+  }
+  monthSelect.addEventListener('change', renderMonthly);
+
+  // ---------- API call ----------
+  function extractJson(text) {
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start === -1 || end === -1 || end < start) throw new Error('No JSON object found in response');
+    return JSON.parse(text.slice(start, end + 1));
+  }
+
+  async function callClaude(description, apiKey, strict) {
+    const baseSystem = `You are a nutrition-data extraction engine for a South African user. Given a free-text meal description, identify each food item and quantity, then determine its nutrition values.
+
+Use web search to look up real data:
+- For named branded/retail products (e.g. "Woolworths chicken breyani", "Woolworths black cherry yoghurt"), search for the specific product's nutritional information panel (per the stated serving/pack size) and its typical retail price in South Africa (ZAR). Woolworths South Africa product pages, and other SA retailer/nutrition sites, are good sources.
+- For generic whole foods (e.g. "3 strawberries", "6 walnut halves"), use standard nutrition database values (e.g. USDA) scaled to the stated quantity, and estimate a reasonable ZAR cost for that quantity based on typical SA grocery prices.
+- Break the meal into one line item per distinct food mentioned (matching the quantity as stated, e.g. "6 walnut halves" is one item, not six), give each item its own nutrition and cost figures, then sum all items into the meal totals.
+- Do no more than 3 searches total, then stop searching and write your answer — don't keep searching indefinitely.
+
+Respond with ONLY a single raw JSON object, no markdown fences, no commentary, no explanation text before or after. Use this exact schema:
+{"items": [{"name": "string, e.g. '3 strawberries' or 'Woolworths chicken breyani serving'", "calories_kcal": number, "protein_g": number, "fat_g": number, "carbs_g": number, "sugar_g": number, "fiber_g": number, "sodium_mg": number, "cost_zar": number, "source": "short string, e.g. 'Woolworths product page' or 'USDA estimate'"}], "calories_kcal": number, "protein_g": number, "fat_g": number, "carbs_g": number, "sugar_g": number, "fiber_g": number, "sodium_mg": number, "cost_zar": number, "notes": "short string, max 20 words, on key assumptions or sources used"}
+
+The top-level numeric fields are the meal totals and must equal the sum of the "items" array (rounded). All numeric fields must be plain numbers (no units, no strings). If a value cannot be reasonably estimated, use your best approximation rather than omitting it — never leave a field out, and never omit the "items" array.`;
+
+    const strictSuffix = `\n\nIMPORTANT: Your last response did not contain a parseable JSON object. Do not search this time — just use your best estimate from general knowledge and reply with ONLY the raw JSON object, nothing else, no explanation.`;
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 2048,
+        system: baseSystem + (strict ? strictSuffix : ''),
+        messages: [{ role: "user", content: `Meal description: ${description}` }],
+        tools: strict ? [] : [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }]
+      })
+    });
+
+    if (!response.ok) {
+      let detail = '';
+      try { const errData = await response.json(); detail = errData.error && errData.error.message ? errData.error.message : ''; } catch (e) {}
+      if (response.status === 401) throw new Error('API key rejected — check it was copied correctly');
+      if (response.status === 429) throw new Error('Rate limited — wait a moment and try again');
+      throw new Error('API request failed (' + response.status + ')' + (detail ? ': ' + detail : ''));
+    }
+    const data = await response.json();
+    return (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
+  }
+
+  async function parseMeal(description, apiKey) {
+    let textBlocks = await callClaude(description, apiKey, false);
+    try {
+      if (!textBlocks) throw new Error('empty');
+      return extractJson(textBlocks);
+    } catch (e) {
+      // one automatic retry, stricter prompt, no search, more room for the answer itself
+      textBlocks = await callClaude(description, apiKey, true);
+      if (!textBlocks) throw new Error('No text returned from model');
+      return extractJson(textBlocks);
+    }
+  }
+
+  async function handleAdd() {
+    const description = input.value.trim();
+    const apiKey = getKey();
+    const entryDate = dateInput.value || todayStr();
+    if (!description) { showError('Type a meal description first.'); return; }
+
+    const cached = getCachedLookup(description);
+    if (!cached && !apiKey) { showError('Add your Anthropic API key first (gear icon, top right).'); openModal(); return; }
+    clearError();
+    addBtn.disabled = true;
+    addBtn.textContent = cached ? 'Adding…' : 'Analysing…';
+
+    const loadingRow = document.createElement('tr');
+    loadingRow.className = 'nl-loading-row';
+    const shortDesc = description.length > 70 ? description.slice(0, 70) + '…' : description;
+    loadingRow.innerHTML = cached
+      ? `<td colspan="11">Reusing a previous lookup for: "${shortDesc}" (cached ${formatShort(cached.cachedAt.slice(0,10))})</td>`
+      : `<td colspan="11">Looking up nutrition &amp; pricing data for: "${shortDesc}"</td>`;
+    empty.style.display = 'none';
+    tbody.prepend(loadingRow);
+
+    try {
+      const parsed = cached ? cached.data : await parseMeal(description, apiKey);
+      if (!cached) storeCachedLookup(description, parsed);
+      const entry = {
+        id: Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+        mealType: mealSelect.value,
+        description: description,
+        date: entryDate,
+        calories_kcal: parsed.calories_kcal,
+        protein_g: parsed.protein_g,
+        fat_g: parsed.fat_g,
+        carbs_g: parsed.carbs_g,
+        sugar_g: parsed.sugar_g,
+        fiber_g: parsed.fiber_g,
+        sodium_mg: parsed.sodium_mg,
+        cost_zar: parsed.cost_zar,
+        notes: parsed.notes || '',
+        items: Array.isArray(parsed.items) ? parsed.items : [],
+        loggedAt: new Date().toISOString(),
+        fromCache: !!cached
+      };
+      entries.push(entry);
+      saveEntries();
+      input.value = '';
+      renderAll();
+    } catch (e) {
+      showError('Could not parse that meal (' + e.message + '). Try rephrasing or try again.');
+      renderAll();
+    } finally {
+      addBtn.disabled = false;
+      addBtn.textContent = 'Add entry';
+    }
+  }
+
+  tbody.addEventListener('click', (ev) => {
+    const btn = ev.target.closest('.nl-del');
+    if (btn) {
+      entries = entries.filter(e => e.id !== btn.dataset.id);
+      saveEntries();
+      renderAll();
+      return;
+    }
+    const row = ev.target.closest('tr.nl-entry-row');
+    if (row) openBreakdown(row.dataset.id);
+  });
+
+  // ---------- breakdown modal ----------
+  const breakdownModalBg = document.getElementById('breakdown-modal-bg');
+  function openBreakdown(id) {
+    const entry = entries.find(e => e.id === id);
+    if (!entry) return;
+    document.getElementById('bd-title').textContent = entry.description;
+    document.getElementById('bd-meta').textContent = entry.mealType + ' · ' + formatShort(entry.date) + (entry.fromCache ? ' · cached lookup' : '');
+
+    const tbodyEl = document.getElementById('bd-tbody');
+    const emptyEl = document.getElementById('bd-empty');
+    const totalRow = document.getElementById('bd-total-row');
+    const items = Array.isArray(entry.items) ? entry.items : [];
+
+    if (items.length === 0) {
+      tbodyEl.innerHTML = '';
+      emptyEl.style.display = 'block';
+      totalRow.style.display = 'none';
+    } else {
+      emptyEl.style.display = 'none';
+      totalRow.style.display = '';
+      tbodyEl.innerHTML = items.map(it => `
+        <tr>
+          <td style="padding:7px 8px; border-bottom:1px solid var(--line);">${(it.name || 'Item')}${it.source ? '<br><span style="color:#8a8375; font-size:10px;">' + it.source + '</span>' : ''}</td>
+          <td class="mono" style="text-align:right; padding:7px 8px; border-bottom:1px solid var(--line);">${fmt(it.calories_kcal)}</td>
+          <td class="mono" style="text-align:right; padding:7px 8px; border-bottom:1px solid var(--line);">${fmt(it.protein_g,1)}</td>
+          <td class="mono" style="text-align:right; padding:7px 8px; border-bottom:1px solid var(--line);">${fmt(it.fat_g,1)}</td>
+          <td class="mono" style="text-align:right; padding:7px 8px; border-bottom:1px solid var(--line);">${fmt(it.carbs_g,1)}</td>
+          <td class="mono" style="text-align:right; padding:7px 8px; border-bottom:1px solid var(--line);">${fmt(it.sugar_g,1)}</td>
+          <td class="mono" style="text-align:right; padding:7px 8px; border-bottom:1px solid var(--line);">${it.cost_zar !== null && it.cost_zar !== undefined ? fmt(it.cost_zar,2) : '—'}</td>
+        </tr>
+      `).join('');
+      document.getElementById('bd-tot-kcal').textContent = fmt(entry.calories_kcal);
+      document.getElementById('bd-tot-protein').textContent = fmt(entry.protein_g,1);
+      document.getElementById('bd-tot-fat').textContent = fmt(entry.fat_g,1);
+      document.getElementById('bd-tot-carbs').textContent = fmt(entry.carbs_g,1);
+      document.getElementById('bd-tot-sugar').textContent = fmt(entry.sugar_g,1);
+      document.getElementById('bd-tot-cost').textContent = 'R' + fmt(entry.cost_zar,2);
+    }
+    document.getElementById('bd-notes').textContent = entry.notes ? 'Notes: ' + entry.notes : '';
+    breakdownModalBg.classList.add('show');
+  }
+  document.getElementById('close-breakdown-btn').addEventListener('click', () => breakdownModalBg.classList.remove('show'));
+  breakdownModalBg.addEventListener('click', (e) => { if (e.target === breakdownModalBg) breakdownModalBg.classList.remove('show'); });
+
+  addBtn.addEventListener('click', handleAdd);
+  input.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter' && (ev.metaKey || ev.ctrlKey)) { ev.preventDefault(); handleAdd(); }
+  });
+
+  dateInput.value = todayStr();
+  refreshKeybar();
+  refreshSyncbar();
+  loadEntries();
+  renderAll();
+  if (getSyncConfig().key && getSyncConfig().bin) syncNow();
+})();
+</script>
+</body>
+</html>
