@@ -418,7 +418,7 @@
         <thead>
           <tr>
             <th>Meal</th><th>Description</th><th>Kcal</th><th>Protein g</th><th>Fat g</th>
-            <th>Carbs g</th><th>Sugar g</th><th>Fiber g</th><th>Sodium mg</th><th>Cost (R)</th><th></th>
+            <th>Carbs g</th><th>Sugar g</th><th>Fructose g</th><th>Fiber g</th><th>Sodium mg</th><th>Cost (R)</th><th></th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
@@ -426,7 +426,7 @@
           <tr>
             <td>All-time total</td><td></td>
             <td id="tot-kcal"></td><td id="tot-protein"></td><td id="tot-fat"></td>
-            <td id="tot-carbs"></td><td id="tot-sugar"></td><td id="tot-fiber"></td>
+            <td id="tot-carbs"></td><td id="tot-sugar"></td><td id="tot-fructose"></td><td id="tot-fiber"></td>
             <td id="tot-sodium"></td><td id="tot-cost"></td><td></td>
           </tr>
         </tfoot>
@@ -445,10 +445,15 @@
     <div class="nl-chart" id="week-chart"></div>
     <div class="nl-chart-labels" id="week-chart-labels"></div>
     <p class="nl-chart-caption">Calories per day</p>
+
+    <div class="nl-summary-strip" id="week-fructose-summary" style="margin-top:24px; border-color:var(--rust);"></div>
+    <div class="nl-chart" id="week-fructose-chart"></div>
+    <div class="nl-chart-labels" id="week-fructose-chart-labels"></div>
+    <p class="nl-chart-caption">Fructose (estimated) per day</p>
     <div class="nl-table-wrap">
       <table id="week-table">
         <thead>
-          <tr><th>Day</th><th>Date</th><th>Kcal</th><th>Protein g</th><th>Fat g</th><th>Carbs g</th><th>Sugar g</th><th>Fiber g</th><th>Sodium mg</th><th>Cost (R)</th></tr>
+          <tr><th>Day</th><th>Date</th><th>Kcal</th><th>Protein g</th><th>Fat g</th><th>Carbs g</th><th>Sugar g</th><th>Fructose g</th><th>Fiber g</th><th>Sodium mg</th><th>Cost (R)</th></tr>
         </thead>
         <tbody id="week-tbody"></tbody>
       </table>
@@ -466,10 +471,15 @@
     <div class="nl-chart" id="month-chart"></div>
     <div class="nl-chart-labels" id="month-chart-labels"></div>
     <p class="nl-chart-caption" id="month-chart-caption">Calories per week</p>
+
+    <div class="nl-summary-strip" id="month-fructose-summary" style="margin-top:24px; border-color:var(--rust);"></div>
+    <div class="nl-chart" id="month-fructose-chart"></div>
+    <div class="nl-chart-labels" id="month-fructose-chart-labels"></div>
+    <p class="nl-chart-caption">Fructose (estimated) per week</p>
     <div class="nl-table-wrap">
       <table id="month-table">
         <thead>
-          <tr><th>Week</th><th>Days logged</th><th>Kcal</th><th>Protein g</th><th>Fat g</th><th>Carbs g</th><th>Sugar g</th><th>Fiber g</th><th>Sodium mg</th><th>Cost (R)</th></tr>
+          <tr><th>Week</th><th>Days logged</th><th>Kcal</th><th>Protein g</th><th>Fat g</th><th>Carbs g</th><th>Sugar g</th><th>Fructose g</th><th>Fiber g</th><th>Sodium mg</th><th>Cost (R)</th></tr>
         </thead>
         <tbody id="month-tbody"></tbody>
       </table>
@@ -477,7 +487,7 @@
     </div>
   </div>
 
-  <p class="nl-footnote">Figures are AI-estimated using web-sourced nutrition data (incl. Woolworths SA product info where relevant) — approximate, not medical or lab-grade. The dashed target line on the Weekly/Monthly charts is a standard Mifflin-St Jeor estimate (edit it under the gear icon) — a general starting point, not a prescription. It doesn't account for NAFLD, thyroid replacement therapy, or gastritis; loop in your doctor or a dietitian before committing to a target, since weight change can affect thyroid medication dosing and NAFLD management benefits from gradual, supervised loss. Entries and your API key are stored only in this browser, on this device.</p>
+  <p class="nl-footnote">Figures are AI-estimated using web-sourced nutrition data (incl. Woolworths SA product info where relevant) — approximate, not medical or lab-grade. Fructose specifically is a rougher estimate still, since most nutrition panels only report total sugars — it's derived from typical composition (table sugar, HFCS, fruit type, etc.), not a lab measurement. The dashed target lines on the Weekly/Monthly charts (calorie and fructose) are general estimates you can edit under the gear icon, not prescriptions. Neither accounts for NAFLD, thyroid replacement therapy, or gastritis specifically; loop in your doctor or a dietitian before committing to targets, since weight change can affect thyroid medication dosing and NAFLD management benefits from gradual, supervised change. Entries and your API key are stored only in this browser, on this device.</p>
 </div>
 
 <div class="nl-modal-bg" id="modal-bg">
@@ -513,6 +523,10 @@
       </select>
       <input type="number" id="profile-deficit" placeholder="Daily deficit (kcal)" style="flex:1; padding:10px; border:2px solid var(--ink); font-family:'SFMono-Regular',Consolas,monospace; font-size:13px;">
     </div>
+    <div style="margin-bottom:10px;">
+      <input type="number" id="profile-fructose" placeholder="Fructose target (g/day) — default 25" style="width:100%; padding:10px; border:2px solid var(--rust); font-family:'SFMono-Regular',Consolas,monospace; font-size:13px;">
+      <p style="font-size:11px; color:#8a8375; margin:6px 0 0;">General NAFLD dietary-intervention studies commonly use ~25g/day of added/free fructose as a target — not a number your doctor has necessarily confirmed for you. Adjust as advised.</p>
+    </div>
     <div class="nl-modal-actions">
       <button class="nl-btn-secondary" id="cancel-profile-btn">Cancel</button>
       <button class="nl-btn-primary" id="save-profile-btn">Save target</button>
@@ -547,6 +561,7 @@
             <th style="text-align:right; padding:6px 8px; border-bottom:2px solid var(--ink); font-family:'SFMono-Regular',Consolas,monospace; font-size:10px; text-transform:uppercase;">Fat</th>
             <th style="text-align:right; padding:6px 8px; border-bottom:2px solid var(--ink); font-family:'SFMono-Regular',Consolas,monospace; font-size:10px; text-transform:uppercase;">Carbs</th>
             <th style="text-align:right; padding:6px 8px; border-bottom:2px solid var(--ink); font-family:'SFMono-Regular',Consolas,monospace; font-size:10px; text-transform:uppercase;">Sugar</th>
+            <th style="text-align:right; padding:6px 8px; border-bottom:2px solid var(--ink); font-family:'SFMono-Regular',Consolas,monospace; font-size:10px; text-transform:uppercase; color:var(--rust);">Fructose</th>
             <th style="text-align:right; padding:6px 8px; border-bottom:2px solid var(--ink); font-family:'SFMono-Regular',Consolas,monospace; font-size:10px; text-transform:uppercase;">Cost R</th>
           </tr>
         </thead>
@@ -559,6 +574,7 @@
             <td id="bd-tot-fat" style="text-align:right; padding:8px; border-top:3px solid var(--ink);"></td>
             <td id="bd-tot-carbs" style="text-align:right; padding:8px; border-top:3px solid var(--ink);"></td>
             <td id="bd-tot-sugar" style="text-align:right; padding:8px; border-top:3px solid var(--ink);"></td>
+            <td id="bd-tot-fructose" style="text-align:right; padding:8px; border-top:3px solid var(--ink); color:var(--rust);"></td>
             <td id="bd-tot-cost" style="text-align:right; padding:8px; border-top:3px solid var(--ink);"></td>
           </tr>
         </tfoot>
@@ -578,7 +594,7 @@
   const ENTRIES_STORAGE = 'nl_entries';
   const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const NUTRIENT_KEYS = ['calories_kcal','protein_g','fat_g','carbs_g','sugar_g','fiber_g','sodium_mg','cost_zar'];
+  const NUTRIENT_KEYS = ['calories_kcal','protein_g','fat_g','carbs_g','sugar_g','fructose_g','fiber_g','sodium_mg','cost_zar'];
 
   const tbody = document.getElementById('tbody');
   const tfoot = document.getElementById('tfoot');
@@ -691,7 +707,7 @@
 
   // ---------- health profile / calorie target ----------
   const PROFILE_STORAGE = 'nl_profile';
-  const DEFAULT_PROFILE = { sex: 'male', age: 47, height_cm: 177, weight_kg: 90, activity: 1.2, deficit: 500 };
+  const DEFAULT_PROFILE = { sex: 'male', age: 47, height_cm: 177, weight_kg: 90, activity: 1.2, deficit: 500, fructose_target: 25 };
 
   function getProfile() {
     try {
@@ -713,6 +729,10 @@
     if (target < floor) target = floor;
     return Math.round(target);
   }
+  function computeDailyFructoseTarget() {
+    const p = getProfile();
+    return Number(p.fructose_target) || DEFAULT_PROFILE.fructose_target;
+  }
   function populateProfileForm() {
     const p = getProfile();
     document.getElementById('profile-sex').value = p.sex;
@@ -721,6 +741,7 @@
     document.getElementById('profile-weight').value = p.weight_kg;
     document.getElementById('profile-activity').value = p.activity;
     document.getElementById('profile-deficit').value = p.deficit;
+    document.getElementById('profile-fructose').value = p.fructose_target;
   }
   document.getElementById('save-profile-btn').addEventListener('click', () => {
     const p = {
@@ -729,7 +750,8 @@
       height_cm: Number(document.getElementById('profile-height').value) || DEFAULT_PROFILE.height_cm,
       weight_kg: Number(document.getElementById('profile-weight').value) || DEFAULT_PROFILE.weight_kg,
       activity: Number(document.getElementById('profile-activity').value) || DEFAULT_PROFILE.activity,
-      deficit: Number(document.getElementById('profile-deficit').value) || 0
+      deficit: Number(document.getElementById('profile-deficit').value) || 0,
+      fructose_target: Number(document.getElementById('profile-fructose').value) || DEFAULT_PROFILE.fructose_target
     };
     saveProfile(p);
     closeModal();
@@ -926,6 +948,7 @@
       <td class="mono">${fmt(entry.fat_g, 1)}</td>
       <td class="mono">${fmt(entry.carbs_g, 1)}</td>
       <td class="mono">${fmt(entry.sugar_g, 1)}</td>
+      <td class="mono" style="color:var(--rust); font-weight:600;">${fmt(entry.fructose_g, 1)}</td>
       <td class="mono">${fmt(entry.fiber_g, 1)}</td>
       <td class="mono">${fmt(entry.sodium_mg)}</td>
       <td class="mono">${entry.cost_zar !== null && entry.cost_zar !== undefined ? fmt(entry.cost_zar, 2) : '—'}</td>
@@ -956,7 +979,7 @@
       const s = sumEntries(dayBucket);
       const tr = document.createElement('tr');
       tr.className = 'nl-day-subtotal';
-      tr.innerHTML = `<td>Day total</td><td></td><td class="mono">${fmt(s.calories_kcal)}</td><td class="mono">${fmt(s.protein_g,1)}</td><td class="mono">${fmt(s.fat_g,1)}</td><td class="mono">${fmt(s.carbs_g,1)}</td><td class="mono">${fmt(s.sugar_g,1)}</td><td class="mono">${fmt(s.fiber_g,1)}</td><td class="mono">${fmt(s.sodium_mg)}</td><td class="mono">R${fmt(s.cost_zar,2)}</td><td></td>`;
+      tr.innerHTML = `<td>Day total</td><td></td><td class="mono">${fmt(s.calories_kcal)}</td><td class="mono">${fmt(s.protein_g,1)}</td><td class="mono">${fmt(s.fat_g,1)}</td><td class="mono">${fmt(s.carbs_g,1)}</td><td class="mono">${fmt(s.sugar_g,1)}</td><td class="mono">${fmt(s.fructose_g,1)}</td><td class="mono">${fmt(s.fiber_g,1)}</td><td class="mono">${fmt(s.sodium_mg)}</td><td class="mono">R${fmt(s.cost_zar,2)}</td><td></td>`;
       tbody.appendChild(tr);
     };
     sorted.forEach(e => {
@@ -980,6 +1003,7 @@
     document.getElementById('tot-fat').textContent = fmt(s.fat_g, 1);
     document.getElementById('tot-carbs').textContent = fmt(s.carbs_g, 1);
     document.getElementById('tot-sugar').textContent = fmt(s.sugar_g, 1);
+    document.getElementById('tot-fructose').textContent = fmt(s.fructose_g, 1);
     document.getElementById('tot-fiber').textContent = fmt(s.fiber_g, 1);
     document.getElementById('tot-sodium').textContent = fmt(s.sodium_mg);
     document.getElementById('tot-cost').textContent = 'R' + fmt(s.cost_zar, 2);
@@ -1035,6 +1059,9 @@
       weekSummary.innerHTML = '';
       document.getElementById('week-chart').innerHTML = '';
       document.getElementById('week-chart-labels').innerHTML = '';
+      document.getElementById('week-fructose-summary').innerHTML = '';
+      document.getElementById('week-fructose-chart').innerHTML = '';
+      document.getElementById('week-fructose-chart-labels').innerHTML = '';
       weekSelect.innerHTML = '';
       weekLabel.textContent = '';
       return;
@@ -1063,6 +1090,7 @@
         <td class="mono">${hasData ? fmt(s.fat_g,1) : '—'}</td>
         <td class="mono">${hasData ? fmt(s.carbs_g,1) : '—'}</td>
         <td class="mono">${hasData ? fmt(s.sugar_g,1) : '—'}</td>
+        <td class="mono" style="color:var(--rust);">${hasData ? fmt(s.fructose_g,1) : '—'}</td>
         <td class="mono">${hasData ? fmt(s.fiber_g,1) : '—'}</td>
         <td class="mono">${hasData ? fmt(s.sodium_mg) : '—'}</td>
         <td class="mono">${hasData ? 'R'+fmt(s.cost_zar,2) : '—'}</td>
@@ -1084,6 +1112,17 @@
 
     renderChart(document.getElementById('week-chart'), document.getElementById('week-chart-labels'),
       dayTotals.map(s => s.calories_kcal), DAY_NAMES, dailyTarget, 'Target ' + fmt(dailyTarget) + '/day');
+
+    const fructoseTarget = computeDailyFructoseTarget();
+    const daysOverFructose = dayTotals.filter(s => s.fructose_g > fructoseTarget).length;
+    document.getElementById('week-fructose-summary').innerHTML = `
+      <div class="nl-summary-cell"><span class="lbl">Week total fructose</span><span class="val">${fmt(weekTotal.fructose_g,1)}g</span></div>
+      <div class="nl-summary-cell"><span class="lbl">Avg fructose / logged day</span><span class="val">${fmt(weekTotal.fructose_g / loggedDays,1)}g</span></div>
+      <div class="nl-summary-cell"><span class="lbl">Daily target</span><span class="val">${fmt(fructoseTarget)}g</span></div>
+      <div class="nl-summary-cell"><span class="lbl">Days over target</span><span class="val">${daysOverFructose}</span></div>
+    `;
+    renderChart(document.getElementById('week-fructose-chart'), document.getElementById('week-fructose-chart-labels'),
+      dayTotals.map(s => s.fructose_g), DAY_NAMES, fructoseTarget, 'Target ' + fmt(fructoseTarget) + 'g/day');
   }
   weekSelect.addEventListener('change', renderWeekly);
 
@@ -1116,6 +1155,9 @@
       monthSummary.innerHTML = '';
       document.getElementById('month-chart').innerHTML = '';
       document.getElementById('month-chart-labels').innerHTML = '';
+      document.getElementById('month-fructose-summary').innerHTML = '';
+      document.getElementById('month-fructose-chart').innerHTML = '';
+      document.getElementById('month-fructose-chart-labels').innerHTML = '';
       monthSelect.innerHTML = '';
       monthLabelEl.textContent = '';
       return;
@@ -1153,6 +1195,7 @@
         <td class="mono">${hasData ? fmt(s.fat_g,1) : '—'}</td>
         <td class="mono">${hasData ? fmt(s.carbs_g,1) : '—'}</td>
         <td class="mono">${hasData ? fmt(s.sugar_g,1) : '—'}</td>
+        <td class="mono" style="color:var(--rust);">${hasData ? fmt(s.fructose_g,1) : '—'}</td>
         <td class="mono">${hasData ? fmt(s.fiber_g,1) : '—'}</td>
         <td class="mono">${hasData ? fmt(s.sodium_mg) : '—'}</td>
         <td class="mono">${hasData ? 'R'+fmt(s.cost_zar,2) : '—'}</td>
@@ -1175,6 +1218,18 @@
 
     renderChart(document.getElementById('month-chart'), document.getElementById('month-chart-labels'),
       weekTotals.map(s => s.calories_kcal), weekLabels, weeklyTarget, 'Target ' + fmt(weeklyTarget) + '/wk');
+
+    const fructoseDailyTarget = computeDailyFructoseTarget();
+    const fructoseWeeklyTarget = fructoseDailyTarget * 7;
+    const weeksOverFructose = weekTotals.filter((s, i) => weekLoggedDays[i] > 0 && s.fructose_g > fructoseWeeklyTarget).length;
+    document.getElementById('month-fructose-summary').innerHTML = `
+      <div class="nl-summary-cell"><span class="lbl">Month total fructose</span><span class="val">${fmt(monthTotal.fructose_g,1)}g</span></div>
+      <div class="nl-summary-cell"><span class="lbl">Avg fructose / logged day</span><span class="val">${fmt(monthTotal.fructose_g / loggedDays,1)}g</span></div>
+      <div class="nl-summary-cell"><span class="lbl">Daily target</span><span class="val">${fmt(fructoseDailyTarget)}g</span></div>
+      <div class="nl-summary-cell"><span class="lbl">Weeks over target</span><span class="val">${weeksOverFructose}</span></div>
+    `;
+    renderChart(document.getElementById('month-fructose-chart'), document.getElementById('month-fructose-chart-labels'),
+      weekTotals.map(s => s.fructose_g), weekLabels, fructoseWeeklyTarget, 'Target ' + fmt(fructoseWeeklyTarget) + 'g/wk');
   }
   monthSelect.addEventListener('change', renderMonthly);
 
@@ -1193,10 +1248,11 @@ Use web search to look up real data:
 - For named branded/retail products (e.g. "Woolworths chicken breyani", "Woolworths black cherry yoghurt"), search for the specific product's nutritional information panel (per the stated serving/pack size) and its typical retail price in South Africa (ZAR). Woolworths South Africa product pages, and other SA retailer/nutrition sites, are good sources.
 - For generic whole foods (e.g. "3 strawberries", "6 walnut halves"), use standard nutrition database values (e.g. USDA) scaled to the stated quantity, and estimate a reasonable ZAR cost for that quantity based on typical SA grocery prices.
 - Break the meal into one line item per distinct food mentioned (matching the quantity as stated, e.g. "6 walnut halves" is one item, not six), give each item its own nutrition and cost figures, then sum all items into the meal totals.
+- Also estimate fructose specifically (not just total sugar) for each item, since fructose — not sugar broadly — is the figure being tracked here. Nutrition panels rarely list it directly, so estimate from known composition: table sugar/sucrose is roughly half fructose by weight once digested; high-fructose corn syrup is roughly 42-55% fructose; whole fruits vary (apples, pears, mangoes, and grapes are relatively fructose-heavy; bananas, apricots, and berries are comparatively lower); dairy sugars (lactose) contain no fructose, so for a flavoured dairy product estimate fructose only from its fruit/added-sugar component, not its lactose content; starchy carbs and fiber contain none. Give your best defensible estimate rather than approximating fructose as equal to total sugar.
 - Do no more than 3 searches total, then stop searching and write your answer — don't keep searching indefinitely.
 
 Respond with ONLY a single raw JSON object, no markdown fences, no commentary, no explanation text before or after. Use this exact schema:
-{"items": [{"name": "string, e.g. '3 strawberries' or 'Woolworths chicken breyani serving'", "calories_kcal": number, "protein_g": number, "fat_g": number, "carbs_g": number, "sugar_g": number, "fiber_g": number, "sodium_mg": number, "cost_zar": number, "source": "short string, e.g. 'Woolworths product page' or 'USDA estimate'"}], "calories_kcal": number, "protein_g": number, "fat_g": number, "carbs_g": number, "sugar_g": number, "fiber_g": number, "sodium_mg": number, "cost_zar": number, "notes": "short string, max 20 words, on key assumptions or sources used"}
+{"items": [{"name": "string, e.g. '3 strawberries' or 'Woolworths chicken breyani serving'", "calories_kcal": number, "protein_g": number, "fat_g": number, "carbs_g": number, "sugar_g": number, "fructose_g": number, "fiber_g": number, "sodium_mg": number, "cost_zar": number, "source": "short string, e.g. 'Woolworths product page' or 'USDA estimate'"}], "calories_kcal": number, "protein_g": number, "fat_g": number, "carbs_g": number, "sugar_g": number, "fructose_g": number, "fiber_g": number, "sodium_mg": number, "cost_zar": number, "notes": "short string, max 20 words, on key assumptions or sources used"}
 
 The top-level numeric fields are the meal totals and must equal the sum of the "items" array (rounded). All numeric fields must be plain numbers (no units, no strings). If a value cannot be reasonably estimated, use your best approximation rather than omitting it — never leave a field out, and never omit the "items" array.`;
 
@@ -1212,7 +1268,7 @@ The top-level numeric fields are the meal totals and must equal the sum of the "
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
-        max_tokens: 2048,
+        max_tokens: 2304,
         system: baseSystem + (strict ? strictSuffix : ''),
         messages: [{ role: "user", content: `Meal description: ${description}` }],
         tools: strict ? [] : [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }]
@@ -1277,6 +1333,7 @@ The top-level numeric fields are the meal totals and must equal the sum of the "
         fat_g: parsed.fat_g,
         carbs_g: parsed.carbs_g,
         sugar_g: parsed.sugar_g,
+        fructose_g: parsed.fructose_g,
         fiber_g: parsed.fiber_g,
         sodium_mg: parsed.sodium_mg,
         cost_zar: parsed.cost_zar,
@@ -1338,6 +1395,7 @@ The top-level numeric fields are the meal totals and must equal the sum of the "
           <td class="mono" style="text-align:right; padding:7px 8px; border-bottom:1px solid var(--line);">${fmt(it.fat_g,1)}</td>
           <td class="mono" style="text-align:right; padding:7px 8px; border-bottom:1px solid var(--line);">${fmt(it.carbs_g,1)}</td>
           <td class="mono" style="text-align:right; padding:7px 8px; border-bottom:1px solid var(--line);">${fmt(it.sugar_g,1)}</td>
+          <td class="mono" style="text-align:right; padding:7px 8px; border-bottom:1px solid var(--line); color:var(--rust);">${fmt(it.fructose_g,1)}</td>
           <td class="mono" style="text-align:right; padding:7px 8px; border-bottom:1px solid var(--line);">${it.cost_zar !== null && it.cost_zar !== undefined ? fmt(it.cost_zar,2) : '—'}</td>
         </tr>
       `).join('');
@@ -1346,6 +1404,7 @@ The top-level numeric fields are the meal totals and must equal the sum of the "
       document.getElementById('bd-tot-fat').textContent = fmt(entry.fat_g,1);
       document.getElementById('bd-tot-carbs').textContent = fmt(entry.carbs_g,1);
       document.getElementById('bd-tot-sugar').textContent = fmt(entry.sugar_g,1);
+      document.getElementById('bd-tot-fructose').textContent = fmt(entry.fructose_g,1);
       document.getElementById('bd-tot-cost').textContent = 'R' + fmt(entry.cost_zar,2);
     }
     document.getElementById('bd-notes').textContent = entry.notes ? 'Notes: ' + entry.notes : '';
